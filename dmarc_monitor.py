@@ -6,7 +6,6 @@ import xml.etree.ElementTree as ET
 import zipfile
 import gzip
 import imaplib
-import email
 import re
 from prometheus_client import start_http_server, Gauge
 from email import policy
