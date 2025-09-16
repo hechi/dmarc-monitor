@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 
+import gzip
+import imaplib
 import os
+import re
 import time
 import xml.etree.ElementTree as ET
 import zipfile
-import gzip
-import imaplib
-import re
-from prometheus_client import start_http_server, Gauge
 from email import policy
 from email.parser import BytesParser
 from io import BytesIO
+
+from prometheus_client import start_http_server, Gauge
+
 
 # Read email credentials from environment variables
 EMAIL_USER = os.getenv("EMAIL_USER")
