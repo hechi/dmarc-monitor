@@ -9,10 +9,9 @@ COPY pyproject.toml .
 RUN pip install --no-cache-dir .
 
 # Copy the Python script
-COPY dmarc_monitor.py .
+COPY --chmod=0755 dmarc_monitor.py .
 
 # Expose port 8000 for Prometheus metrics
 EXPOSE 8000
 
-# Run the script permanently
-CMD ["python", "dmarc_monitor.py"]
+ENTRYPOINT ["/app/dmarc_monitor.py"]

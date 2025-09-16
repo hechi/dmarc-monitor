@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
 
+import argparse
 import gzip
 import imaplib
-import os
 import re
 import time
+import tomllib
 import xml.etree.ElementTree as ET
 import zipfile
 from email import policy
 from email.parser import BytesParser
 from io import BytesIO
+from pathlib import Path
 
 from prometheus_client import start_http_server, Gauge
 
-
-# Read email credentials from environment variables
-EMAIL_USER = os.getenv("EMAIL_USER")
-EMAIL_PASS = os.getenv("EMAIL_PASS")
-IMAP_SERVER = os.getenv("IMAP_SERVER")
 
 # Define Prometheus metrics with labels (domain, provider, report_id, report_date)
 dmarc_passed = Gauge(
@@ -36,14 +33,25 @@ dmarc_last_processed_timestamp_seconds = Gauge(
     ['domain', 'provider', 'report_id', 'report_date']
 )
 
+ARGPARSER = argparse.ArgumentParser(
+    description="Fetch, parse, and export Prometheus metrics from DMARC mail."
+)
+ARGPARSER.add_argument("-c", "--config", type=str, required=True,
+                       help="load specified configuration file")
+ARGS = ARGPARSER.parse_args()
+
+with open(Path(ARGS.config), "rb") as f:
+    CONFIG = tomllib.load(f)
+
+
 def get_email_attachments():
     """Connects to an email inbox and retrieves DMARC report attachments."""
     attachments = []
-    
+
     try:
-        mail = imaplib.IMAP4_SSL(IMAP_SERVER)
-        mail.login(EMAIL_USER, EMAIL_PASS)
-        mail.select('inbox')
+        mail = imaplib.IMAP4_SSL(CONFIG["email"]["imap_server"])
+        mail.login(CONFIG["email"]["username"], CONFIG["email"]["password"])
+        mail.select(CONFIG["email"].get("folder", "INBOX"))
 
         # Search for unread emails with attachments
         result, data = mail.search(None, '(UNSEEN)')
@@ -112,6 +120,7 @@ def extract_dmarc_reports():
 
     return xml_reports
 
+
 def parse_dmarc_report(xml_data):
     """Parses a single DMARC XML report and updates Prometheus metrics."""
     try:
@@ -156,18 +165,28 @@ def update_metrics():
                 parse_dmarc_report(xml_data)
         time.sleep(60)
 
+
 def main():
     """Starts the Prometheus server and monitoring loop."""
-    if not EMAIL_USER or not EMAIL_PASS or not IMAP_SERVER:
-        print("Error: Missing environment variables. Set EMAIL_USER, EMAIL_PASS, and IMAP_SERVER.")
-        return
+
+    try:
+        assert CONFIG["email"]["username"]
+        assert CONFIG["email"]["password"]
+        assert CONFIG["email"]["imap_server"]
+    except KeyError as err:
+        raise KeyError("Invalid config file. Refer to the example file.") from err
 
     # Start Prometheus HTTP server
-    start_http_server(8000)
-    print("Started dmarc_monitor server")
+    try:
+        prom_port = CONFIG["prometheus"].get("port", 8000)
+    except KeyError:
+        pass
+    start_http_server(prom_port)
+    print(f"Started dmarc_monitor server. Listening on :{prom_port}...")
 
     # Start monitoring loop
     update_metrics()
+
 
 if __name__ == "__main__":
     main()

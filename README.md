@@ -9,13 +9,12 @@ DMARC Monitor is a **Prometheus-exporting service** that automatically fetches D
 
 ## Features 🚀
 
-✅ **Automatically fetches DMARC reports** from email attachments (`.zip` or `.gz`).  
-✅ **Parses XML reports** and extracts relevant metrics.  
-✅ **Exposes DMARC data** via a **Prometheus metrics endpoint (`:8000/metrics`)**.  
-✅ **Removes unnecessary namespaces (`xmlns`)** for compatibility.  
-✅ **Deployable via Docker and Docker Compose** for ease of use.  
-✅ **Uses environment variables for secure configuration** instead of `.env`.  
-✅ **Supports Grafana for visualization** of DMARC trends over time.  
+✅ **Automatically fetches DMARC reports** from email attachments (`.zip` or `.gz`).
+✅ **Parses XML reports** and extracts relevant metrics.
+✅ **Exposes DMARC data** via a **Prometheus metrics endpoint (`:8000/metrics`)**.
+✅ **Removes unnecessary namespaces (`xmlns`)** for compatibility.
+✅ **Deployable via Docker and Docker Compose** for ease of use.
+✅ **Supports Grafana for visualization** of DMARC trends over time.
 
 ---
 
@@ -51,14 +50,8 @@ cd dmarc-monitor
 ```
 
 ### **2️⃣ Set Up Docker Compose**
-#### **Modify `docker-compose.yml` with Your Email Credentials**
-Edit the `environment` section in `docker-compose.yml`:
-```yaml
-environment:
-  EMAIL_USER: "your-email@example.com"
-  EMAIL_PASS: "your-email-password"
-  IMAP_SERVER: "imap.example.com"
-```
+#### **Copy config.example.toml to config.toml**
+Edit the config file with your credentials and customization:
 
 ### **3️⃣ Build & Start the Service**
 ```sh
@@ -107,13 +100,7 @@ sum(dmarc_failed_count) by (domain)
 
 ## **Configuration Options**
 
-You can **modify the environment variables** to customize the setup:
-
-| Variable     | Description                                  | Example Value              |
-|-------------|----------------------------------------------|----------------------------|
-| `EMAIL_USER` | Email address to fetch DMARC reports from | `your-email@example.com`   |
-| `EMAIL_PASS` | Email password (or App Password)          | `your-email-password`      |
-| `IMAP_SERVER` | IMAP server for your email provider       | `imap.gmail.com`           |
+The config.example.toml file has commented options and defaults.
 
 💡 **Tip:** If using Gmail, generate an **App Password** instead of using your real password.
 

@@ -3,8 +3,7 @@ services:
     build: .
     ports:
       - "8000:8000"
-    environment:
-      EMAIL_USER: "your-email@example.com"
-      EMAIL_PASS: "your-email-password"
-      IMAP_SERVER: "imap.example.com"
+    volumes:
+      - ./config.toml:/app/config.toml:ro
     restart: always
+    command: ["-c", "config.toml"]

@@ -1,0 +1,18 @@
+[email]
+# The email username to the account holding dmarc reports
+username = "user@example.com"
+
+# The password to the account holding dmarc reports
+password = "password"
+
+# The IMAP server with which to connect
+imap_server = "imap.example.com"
+
+# (Optional) The IMAP folder to watch for unread mail
+# Default: "INBOX"
+folder = "INBOX"
+
+[prometheus]
+# (Optional) The port that Prometheus will expose
+# Default: 8000
+port = 8000
