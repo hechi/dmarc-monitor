@@ -27,17 +27,17 @@ http://localhost:8000/metrics
 ```
 
 ### **Available Metrics**
-| Metric Name                    | Description                                    | Labels (`domain`, `provider`, `report_id`, `report_date`) |
-|---------------------------------|------------------------------------------------|-----------------------------------------------------------|
-| `dmarc_passed_count`           | Number of emails that **passed** DMARC        | ✅ |
-| `dmarc_failed_count`           | Number of emails that **failed** DMARC        | ✅ |
-| `last_processed_timestamp`     | Timestamp of last processed DMARC report      | ✅ |
+| Metric Name                              | Description                              | Labels (`domain`, `provider`, `report_id`, `report_date`) |
+|------------------------------------------|------------------------------------------|-----------------------------------------------------------|
+| `dmarc_passed_count`                     | Number of emails that **passed** DMARC   | ✅                                                        |
+| `dmarc_failed_count`                     | Number of emails that **failed** DMARC   | ✅                                                        |
+| `dmarc_last_processed_timestamp_seconds` | Timestamp of last processed DMARC report | ✅                                                        |
 
 Example Output:
 ```
 dmarc_passed_count{domain="example.com", provider="Google", report_id="123456789", report_date="2025-02-18"} 500
 dmarc_failed_count{domain="example.com", provider="Google", report_id="123456789", report_date="2025-02-18"} 20
-last_processed_timestamp{domain="example.com", provider="Google", report_id="123456789", report_date="2025-02-18"} 1708334567.123
+dmarc_last_processed_timestamp_seconds{domain="example.com", provider="Google", report_id="123456789", report_date="2025-02-18"} 1708334567.123
 ```
 
 ---

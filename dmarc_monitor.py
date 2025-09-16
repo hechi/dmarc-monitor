@@ -27,8 +27,8 @@ dmarc_failed = Gauge(
     'Number of emails that failed DMARC',
     ['domain', 'provider', 'report_id', 'report_date']
 )
-last_processed_timestamp = Gauge(
-    'last_processed_timestamp',
+dmarc_last_processed_timestamp_seconds = Gauge(
+    'dmarc_last_processed_timestamp_seconds',
     'Timestamp of last processed DMARC report',
     ['domain', 'provider', 'report_id', 'report_date']
 )
@@ -137,7 +137,7 @@ def parse_dmarc_report(xml_data):
         # Update Prometheus metrics with labels
         dmarc_passed.labels(domain=domain, provider=org_name, report_id=report_id, report_date=report_date).inc(passed_count)
         dmarc_failed.labels(domain=domain, provider=org_name, report_id=report_id, report_date=report_date).inc(failed_count)
-        last_processed_timestamp.labels(domain=domain, provider=org_name, report_id=report_id, report_date=report_date).set(time.time())
+        dmarc_last_processed_timestamp_seconds.labels(domain=domain, provider=org_name, report_id=report_id, report_date=report_date).set(time.time())
 
         print(f"Updated metrics - Domain: {domain}, Provider: {org_name}, Report ID: {report_id}, Date: {report_date}, Passed: {passed_count}, Failed: {failed_count}")
 
