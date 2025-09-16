@@ -158,12 +158,21 @@ def parse_dmarc_report(xml_data):
 
 def update_metrics():
     """Periodically fetches new emails, extracts, and updates metrics."""
+    try:
+        interval = CONFIG["prometheus"].get("interval", 60)
+    except KeyError:
+        pass
+
+    if interval < 30:
+        print("Warning: Configured interval too low; Setting minimum 30 seconds")
+        interval = 30
     while True:
         xml_reports = extract_dmarc_reports()
         if xml_reports:
             for xml_data in xml_reports:
                 parse_dmarc_report(xml_data)
-        time.sleep(60)
+
+        time.sleep(interval)
 
 
 def main():

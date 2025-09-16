@@ -16,3 +16,7 @@ folder = "INBOX"
 # (Optional) The port that Prometheus will expose
 # Default: 8000
 port = 8000
+
+# (Optional) The interval (in seconds) between updating metrics
+# Default: 60
+interval = 60
