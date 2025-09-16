@@ -1,0 +1,11 @@
+[project]
+
+name = "dmarc-monitor"
+version = "0.2.0"
+license = {text = "MIT"}
+dependencies = [
+    "prometheus_client"
+]
+
+[project.scripts]
+dmarc-monitor = "dmarc_monitor:main"

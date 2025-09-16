@@ -5,8 +5,8 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Copy the requirements and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml .
+RUN pip install --no-cache-dir .
 
 # Copy the Python script
 COPY dmarc_monitor.py .
