@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   release:
@@ -22,14 +23,15 @@ jobs:
 
       - uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/dmarc-monitor
+          images: ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -49,7 +51,7 @@ jobs:
       - name: Run Trivy vulnerability scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ${{ secrets.DOCKER_USERNAME }}/dmarc-monitor@${{ steps.push.outputs.digest }}
+          image-ref: ghcr.io/${{ github.repository }}@${{ steps.push.outputs.digest }}
           format: table
           exit-code: '1'
           ignore-unfixed: true
@@ -59,7 +61,7 @@ jobs:
       - name: Generate SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
         with:
-          image: ${{ secrets.DOCKER_USERNAME }}/dmarc-monitor@${{ steps.push.outputs.digest }}
+          image: ghcr.io/${{ github.repository }}@${{ steps.push.outputs.digest }}
           format: spdx-json
           output-file: sbom.spdx.json
           upload-release-assets: false
