@@ -1,17 +1,18 @@
-# Use a lightweight Python base image
-FROM python:3.11-slim
+FROM python:3.13-slim
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the requirements and install dependencies
-COPY pyproject.toml .
-RUN pip install --no-cache-dir .
+COPY pyproject.toml dmarc_monitor.py ./
 
-# Copy the Python script
-COPY --chmod=0755 dmarc_monitor.py .
+RUN pip install --no-cache-dir . && \
+    groupadd --system appgroup && \
+    useradd --system --gid appgroup --no-create-home appuser
 
-# Expose port 8000 for Prometheus metrics
+USER appuser
+
 EXPOSE 8000
 
-ENTRYPOINT ["/app/dmarc_monitor.py"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/')" || exit 1
+
+ENTRYPOINT ["dmarc-monitor"]

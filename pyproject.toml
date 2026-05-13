@@ -1,11 +1,19 @@
 [project]
-
 name = "dmarc-monitor"
-version = "0.2.0"
+version = "0.3.0"
 license = {text = "MIT"}
+requires-python = ">=3.11"
 dependencies = [
-    "prometheus_client"
+    "defusedxml>=0.7.1",
+    "prometheus_client>=0.21.1",
 ]
 
 [project.scripts]
 dmarc-monitor = "dmarc_monitor:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["dmarc_monitor"]

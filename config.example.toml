@@ -17,6 +17,6 @@ folder = "INBOX"
 # Default: 8000
 port = 8000
 
-# (Optional) The interval (in seconds) between updating metrics
+# (Optional) The interval (in seconds) between updating metrics (minimum: 30)
 # Default: 60
 interval = 60

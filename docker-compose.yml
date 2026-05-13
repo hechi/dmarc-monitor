@@ -5,5 +5,5 @@ services:
       - "8000:8000"
     volumes:
       - ./config.toml:/app/config.toml:ro
-    restart: always
-    command: ["-c", "config.toml"]
+    restart: unless-stopped
+    command: ["-c", "/app/config.toml"]
