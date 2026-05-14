@@ -119,10 +119,37 @@ All configuration is done via a TOML file passed with `-c <path>`. See `config.e
 | `email.password`       | Yes      | —         | Email password or App Password                           |
 | `email.imap_server`    | Yes      | —         | IMAP server hostname                                     |
 | `email.folder`         | No       | `INBOX`   | IMAP folder to watch for unread mail                     |
+| `email.archive_folder` | No       | `Archive` | IMAP folder to move processed mails into                 |
 | `prometheus.port`      | No       | `8000`    | Port to expose the Prometheus metrics endpoint on        |
 | `prometheus.interval`  | No       | `60`      | Seconds between metric update cycles (minimum: 30)       |
 
 **Tip:** If using Gmail, generate an **App Password** instead of using your account password.
+
+### Email filter rules
+
+Filter rules control which unread emails are processed. Each `[[email.filter]]` block defines one condition; an email is processed if it matches **at least one** block (OR). Within a block, **all** specified keys must match (AND). Matching is case-insensitive regex.
+
+Supported keys per block: `from`, `to`, `subject`.
+
+If no `[[email.filter]]` blocks are defined, all unread emails are processed.
+
+**Example:** process emails addressed to `dmarc-*` **or** with `DMARC` anywhere in the subject:
+
+```toml
+[[email.filter]]
+to = "dmarc-.*"
+
+[[email.filter]]
+subject = "DMARC"
+```
+
+**Example:** process only emails from Google that also mention DMARC in the subject (AND):
+
+```toml
+[[email.filter]]
+from = ".*@google\\.com"
+subject = "DMARC"
+```
 
 ---
 

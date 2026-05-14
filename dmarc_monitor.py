@@ -37,8 +37,41 @@ with open(Path(ARGS.config), "rb") as f:
     CONFIG = tomllib.load(f)
 
 
+def check_imap_folders():
+    try:
+        mail = imaplib.IMAP4_SSL(CONFIG["email"]["imap_server"])
+        mail.login(CONFIG["email"]["username"], CONFIG["email"]["password"])
+        source = CONFIG["email"].get("folder", "INBOX")
+        archive = CONFIG["email"].get("archive_folder", "Archive")
+        missing = []
+        for folder in dict.fromkeys([source, archive]):
+            result, _ = mail.select(f'"{folder}"')
+            if result != 'OK':
+                missing.append(folder)
+        mail.logout()
+        if missing:
+            raise SystemExit(f"IMAP folder(s) not found: {', '.join(missing)}")
+    except SystemExit:
+        raise
+    except Exception as e:
+        raise SystemExit(f"IMAP connection failed during folder check: {e}")
+
+
+def _matches_filter(msg):
+    conditions = CONFIG["email"].get("filter", [])
+    if not conditions:
+        return True
+    # OR between blocks, AND within each block
+    return any(
+        all(re.search(pattern, msg.get(header, ""), re.IGNORECASE)
+            for header, pattern in condition.items())
+        for condition in conditions
+    )
+
+
 def get_email_attachments():
     attachments = []
+    archive_folder = CONFIG["email"].get("archive_folder", "Archive")
     try:
         mail = imaplib.IMAP4_SSL(CONFIG["email"]["imap_server"])
         mail.login(CONFIG["email"]["username"], CONFIG["email"]["password"])
@@ -51,11 +84,16 @@ def get_email_attachments():
                 if result != 'OK':
                     continue
                 msg = BytesParser(policy=policy.default).parsebytes(msg_data[0][1])
+                if not _matches_filter(msg):
+                    continue
                 for part in msg.iter_attachments():
                     filename = part.get_filename()
                     if filename and (filename.endswith('.zip') or filename.endswith('.gz')):
                         attachments.append((filename, part.get_payload(decode=True)))
                 mail.store(num, '+FLAGS', '\\Seen')
+                mail.copy(num, f'"{archive_folder}"')
+                mail.store(num, '+FLAGS', '\\Deleted')
+            mail.expunge()
         mail.logout()
     except Exception as e:
         print(f"Error retrieving emails: {e}")
@@ -139,6 +177,8 @@ def main():
     missing = [k for k in ("username", "password", "imap_server") if not email_cfg.get(k)]
     if missing:
         raise SystemExit(f"Missing required config keys: {', '.join(f'email.{k}' for k in missing)}")
+
+    check_imap_folders()
 
     port = CONFIG.get("prometheus", {}).get("port", 8000)
     start_http_server(port)

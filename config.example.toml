@@ -12,6 +12,23 @@ imap_server = "imap.example.com"
 # Default: "INBOX"
 folder = "INBOX"
 
+# (Optional) The IMAP folder to move processed mails into
+# Default: "Archive"
+archive_folder = "Archive"
+
+# (Optional) Filter rules for which emails to process.
+# Each [[email.filter]] block is one condition; conditions are OR-ed together.
+# Multiple keys within one block are AND-ed together.
+# Supported keys: from, to, subject (all regex, case-insensitive).
+# If no filter blocks are defined, all unread emails are processed.
+#
+# Example: process emails addressed to dmarc-* OR with "DMARC" in the subject:
+# [[email.filter]]
+# to = "dmarc-.*"
+#
+# [[email.filter]]
+# subject = "Report Domain"
+
 [prometheus]
 # (Optional) The port that Prometheus will expose
 # Default: 8000
