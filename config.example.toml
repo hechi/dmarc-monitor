@@ -29,6 +29,11 @@ archive_folder = "Archive"
 # [[email.filter]]
 # subject = "Report Domain"
 
+[log]
+# (Optional) Log level: DEBUG, INFO, WARNING, ERROR
+# Default: INFO
+level = "INFO"
+
 [prometheus]
 # (Optional) The port that Prometheus will expose
 # Default: 8000
