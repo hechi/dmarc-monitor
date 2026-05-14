@@ -3,8 +3,11 @@
 import argparse
 import gzip
 import imaplib
+import json
 import re
+import signal
 import sys
+import threading
 import time
 import tomllib
 import zipfile
@@ -49,6 +52,50 @@ log_level = CONFIG.get("log", {}).get("level", "INFO").upper()
 logger.remove()
 logger.add(sys.stderr, level=log_level,
            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | {message}")
+
+# In-memory state: "domain\x00provider\x00disposition" -> cumulative count
+_state: dict[str, int] = {}
+_stop_event = threading.Event()
+
+
+def _handle_shutdown(signum, frame):
+    logger.info("Shutdown signal received, stopping...")
+    _stop_event.set()
+
+
+signal.signal(signal.SIGTERM, _handle_shutdown)
+signal.signal(signal.SIGINT, _handle_shutdown)
+
+
+def _state_path() -> Path:
+    return Path(CONFIG.get("state_file", "data/dmarc_state.json"))
+
+
+def load_state():
+    path = _state_path()
+    if not path.exists():
+        logger.info("No state file found at {}, starting fresh", path)
+        return
+    try:
+        with open(path) as f:
+            saved = json.load(f)
+        for key, count in saved.items():
+            _state[key] = count
+            domain, provider, disposition = key.split("\x00", 2)
+            dmarc_reports_total.labels(
+                domain=domain, provider=provider, disposition=disposition
+            ).inc(count)
+        logger.info("Resumed state from {} ({} series)", path, len(_state))
+    except Exception as e:
+        logger.warning("Could not load state file, starting fresh: {}", e)
+
+
+def _save_state():
+    try:
+        with open(_state_path(), "w") as f:
+            json.dump(_state, f, indent=2)
+    except Exception as e:
+        logger.error("Could not save state: {}", e)
 
 
 def check_imap_folders():
@@ -188,10 +235,14 @@ def parse_dmarc_report(xml_data):
                 domain=domain, provider=org_name, disposition=disposition
             ).inc(count)
             disposition_counts[disposition] = disposition_counts.get(disposition, 0) + count
+            key = f"{domain}\x00{org_name}\x00{disposition}"
+            _state[key] = _state.get(key, 0) + count
 
         dmarc_last_processed_timestamp_seconds.labels(
             domain=domain, provider=org_name
         ).set(time.time())
+
+        _save_state()
 
         counts_str = ", ".join(f"{d}={n}" for d, n in disposition_counts.items())
         logger.info("Processed report — provider: {}, domain: {}, counts: [{}]",
@@ -203,7 +254,7 @@ def parse_dmarc_report(xml_data):
 
 def update_metrics():
     interval = max(CONFIG.get("prometheus", {}).get("interval", 60), 30)
-    while True:
+    while not _stop_event.is_set():
         logger.debug("Checking mailbox for new DMARC reports...")
         reports = extract_dmarc_reports()
         if not reports:
@@ -211,7 +262,8 @@ def update_metrics():
         for xml_data in reports:
             parse_dmarc_report(xml_data)
         logger.debug("Next check in {}s", interval)
-        time.sleep(interval)
+        _stop_event.wait(timeout=interval)
+    logger.info("Stopped.")
 
 
 def main():
@@ -221,6 +273,7 @@ def main():
     if missing:
         raise SystemExit(f"Missing required config keys: {', '.join(f'email.{k}' for k in missing)}")
 
+    load_state()
     check_imap_folders()
 
     port = CONFIG.get("prometheus", {}).get("port", 8000)

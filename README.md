@@ -10,7 +10,9 @@ DMARC Monitor is a **Prometheus-exporting service** that automatically fetches D
 - Automatically fetches DMARC reports from email attachments (`.zip` or `.gz`)
 - Parses XML reports and extracts relevant metrics
 - Exposes DMARC data via a **Prometheus metrics endpoint** (`:8000/metrics`)
-- Removes unnecessary `xmlns` namespaces for XML compatibility
+- Persists counter state across restarts (`data/dmarc_state.json`)
+- Structured logging via [loguru](https://github.com/Delgan/loguru), configurable log level
+- Graceful shutdown on SIGTERM / Ctrl+C
 - Deployable via Docker and Docker Compose
 - Configured via a TOML file (see `config.example.toml`)
 - Supports Grafana for visualization of DMARC trends over time
@@ -43,6 +45,8 @@ dmarc_reports_total{domain="example.com",disposition="reject",provider="Google"}
 dmarc_last_processed_timestamp_seconds{domain="example.com",provider="Google"} 1708334567.123
 ```
 
+Counter values survive restarts — state is persisted to `data/dmarc_state.json` and resumed on startup.
+
 ---
 
 ## Installation & Usage
@@ -73,6 +77,7 @@ docker compose up -d --build
 
 This will:
 - Build the Docker image
+- Mount `config.toml` read-only and `data/` for persistent state
 - Start the DMARC monitoring service
 - Expose Prometheus metrics on port `8000`
 
@@ -86,10 +91,12 @@ docker compose logs -f
 http://localhost:8000/metrics
 ```
 
-### 6. Stop & Remove the Container
+### 6. Stop the Service
 ```sh
 docker compose down
 ```
+
+The service shuts down gracefully on SIGTERM or Ctrl+C.
 
 ---
 
@@ -113,15 +120,17 @@ sum(dmarc_reports_total{disposition="reject"}) by (domain)
 
 All configuration is done via a TOML file passed with `-c <path>`. See `config.example.toml` for a full example.
 
-| Key                    | Required | Default   | Description                                              |
-|------------------------|----------|-----------|----------------------------------------------------------|
-| `email.username`       | Yes      | —         | Email address to fetch DMARC reports from                |
-| `email.password`       | Yes      | —         | Email password or App Password                           |
-| `email.imap_server`    | Yes      | —         | IMAP server hostname                                     |
-| `email.folder`         | No       | `INBOX`   | IMAP folder to watch for unread mail                     |
-| `email.archive_folder` | No       | `Archive` | IMAP folder to move processed mails into                 |
-| `prometheus.port`      | No       | `8000`    | Port to expose the Prometheus metrics endpoint on        |
-| `prometheus.interval`  | No       | `60`      | Seconds between metric update cycles (minimum: 30)       |
+| Key                    | Required | Default                  | Description                                              |
+|------------------------|----------|--------------------------|----------------------------------------------------------|
+| `email.username`       | Yes      | —                        | Email address to fetch DMARC reports from                |
+| `email.password`       | Yes      | —                        | Email password or App Password                           |
+| `email.imap_server`    | Yes      | —                        | IMAP server hostname                                     |
+| `email.folder`         | No       | `INBOX`                  | IMAP folder to watch for unread mail                     |
+| `email.archive_folder` | No       | `Archive`                | IMAP folder to move processed mails into                 |
+| `log.level`            | No       | `INFO`                   | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR`           |
+| `prometheus.port`      | No       | `8000`                   | Port to expose the Prometheus metrics endpoint on        |
+| `prometheus.interval`  | No       | `60`                     | Seconds between metric update cycles (minimum: 30)       |
+| `state_file`           | No       | `data/dmarc_state.json`  | Path to persist counter state across restarts            |
 
 **Tip:** If using Gmail, generate an **App Password** instead of using your account password.
 
