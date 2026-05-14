@@ -1,152 +1,153 @@
 
-### **README.md**
-
-# DMARC Monitor 📊
+# DMARC Monitor
 
 ## Overview
 
 DMARC Monitor is a **Prometheus-exporting service** that automatically fetches DMARC (Domain-based Message Authentication, Reporting & Conformance) reports from an **email inbox**, extracts key metrics, and exposes them for monitoring via Prometheus. These metrics can then be visualized using **Grafana** or another dashboard tool.
 
-## Features 🚀
+## Features
 
-✅ **Automatically fetches DMARC reports** from email attachments (`.zip` or `.gz`).  
-✅ **Parses XML reports** and extracts relevant metrics.  
-✅ **Exposes DMARC data** via a **Prometheus metrics endpoint (`:8000/metrics`)**.  
-✅ **Removes unnecessary namespaces (`xmlns`)** for compatibility.  
-✅ **Deployable via Docker and Docker Compose** for ease of use.  
-✅ **Uses environment variables for secure configuration** instead of `.env`.  
-✅ **Supports Grafana for visualization** of DMARC trends over time.  
+- Automatically fetches DMARC reports from email attachments (`.zip` or `.gz`)
+- Parses XML reports and extracts relevant metrics
+- Exposes DMARC data via a **Prometheus metrics endpoint** (`:8000/metrics`)
+- Removes unnecessary `xmlns` namespaces for XML compatibility
+- Deployable via Docker and Docker Compose
+- Configured via a TOML file (see `config.example.toml`)
+- Supports Grafana for visualization of DMARC trends over time
 
 ---
 
-## **Metrics Exposed in Prometheus**
+## Metrics Exposed in Prometheus
 
-Once the service is running, you can query **Prometheus metrics** at:
+Once the service is running, metrics are available at:
 ```
 http://localhost:8000/metrics
 ```
 
-### **Available Metrics**
-| Metric Name                    | Description                                    | Labels (`domain`, `provider`, `report_id`, `report_date`) |
-|---------------------------------|------------------------------------------------|-----------------------------------------------------------|
-| `dmarc_passed_count`           | Number of emails that **passed** DMARC        | ✅ |
-| `dmarc_failed_count`           | Number of emails that **failed** DMARC        | ✅ |
-| `last_processed_timestamp`     | Timestamp of last processed DMARC report      | ✅ |
+### Available Metrics
 
-Example Output:
+| Metric Name                              | Type    | Description                                          | Labels                        |
+|------------------------------------------|---------|------------------------------------------------------|-------------------------------|
+| `dmarc_reports_total`                    | Counter | DMARC disposition counts from processed reports      | `domain`, `provider`, `disposition` |
+| `dmarc_last_processed_timestamp_seconds` | Gauge   | Unix timestamp of the last processed DMARC report    | `domain`, `provider`          |
+
+The `disposition` label reflects the DMARC policy outcome:
+- `none` — email passed (no action taken)
+- `quarantine` — soft-fail
+- `reject` — hard-fail
+
+Example output:
 ```
-dmarc_passed_count{domain="example.com", provider="Google", report_id="123456789", report_date="2025-02-18"} 500
-dmarc_failed_count{domain="example.com", provider="Google", report_id="123456789", report_date="2025-02-18"} 20
-last_processed_timestamp{domain="example.com", provider="Google", report_id="123456789", report_date="2025-02-18"} 1708334567.123
+dmarc_reports_total{domain="example.com",disposition="none",provider="Google"} 500.0
+dmarc_reports_total{domain="example.com",disposition="reject",provider="Google"} 20.0
+dmarc_last_processed_timestamp_seconds{domain="example.com",provider="Google"} 1708334567.123
 ```
 
 ---
 
-## **Installation & Usage**
+## Installation & Usage
 
-### **1️⃣ Clone the Repository**
+### 1. Clone the Repository
 ```sh
 git clone https://github.com/yourusername/dmarc-monitor.git
 cd dmarc-monitor
 ```
 
-### **2️⃣ Set Up Docker Compose**
-#### **Modify `docker-compose.yml` with Your Email Credentials**
-Edit the `environment` section in `docker-compose.yml`:
-```yaml
-environment:
-  EMAIL_USER: "your-email@example.com"
-  EMAIL_PASS: "your-email-password"
-  IMAP_SERVER: "imap.example.com"
+### 2. Create the Configuration File
+```sh
+cp config.example.toml config.toml
 ```
 
-### **3️⃣ Build & Start the Service**
-```sh
-docker-compose up -d --build
+Edit `config.toml` with your email credentials:
+```toml
+[email]
+username = "your-email@example.com"
+password = "your-app-password"
+imap_server = "imap.example.com"
 ```
+
+### 3. Build & Start the Service
+```sh
+docker compose up -d --build
+```
+
 This will:
-- **Build the Docker image**.
-- **Start the DMARC monitoring service**.
-- **Expose Prometheus metrics on port `8000`**.
+- Build the Docker image
+- Start the DMARC monitoring service
+- Expose Prometheus metrics on port `8000`
 
-### **4️⃣ Verify It’s Running**
-Check logs to see if it's processing DMARC reports:
+### 4. Verify It's Running
 ```sh
-docker-compose logs -f
+docker compose logs -f
 ```
 
-### **5️⃣ Query Prometheus Metrics**
-Go to:
+### 5. Query Prometheus Metrics
 ```
 http://localhost:8000/metrics
 ```
 
-### **6️⃣ Stop & Remove the Container**
-To stop the service, run:
+### 6. Stop & Remove the Container
 ```sh
-docker-compose down
+docker compose down
 ```
 
 ---
 
-## **Grafana Integration 📊**
+## Grafana Integration
 
-To visualize DMARC reports, **add Prometheus as a data source** in Grafana, and create a dashboard using the **exported metrics**.
+Add Prometheus as a data source in Grafana and create a dashboard using the exported metrics.
 
-Example **Prometheus Query for Passed Emails**:
+Example — passed emails by domain:
 ```promql
-sum(dmarc_passed_count) by (domain)
+sum(dmarc_reports_total{disposition="none"}) by (domain)
 ```
 
-Example **Prometheus Query for Failed Emails**:
+Example — rejected emails by domain:
 ```promql
-sum(dmarc_failed_count) by (domain)
+sum(dmarc_reports_total{disposition="reject"}) by (domain)
 ```
 
 ---
 
-## **Configuration Options**
+## Configuration Reference
 
-You can **modify the environment variables** to customize the setup:
+All configuration is done via a TOML file passed with `-c <path>`. See `config.example.toml` for a full example.
 
-| Variable     | Description                                  | Example Value              |
-|-------------|----------------------------------------------|----------------------------|
-| `EMAIL_USER` | Email address to fetch DMARC reports from | `your-email@example.com`   |
-| `EMAIL_PASS` | Email password (or App Password)          | `your-email-password`      |
-| `IMAP_SERVER` | IMAP server for your email provider       | `imap.gmail.com`           |
+| Key                    | Required | Default   | Description                                              |
+|------------------------|----------|-----------|----------------------------------------------------------|
+| `email.username`       | Yes      | —         | Email address to fetch DMARC reports from                |
+| `email.password`       | Yes      | —         | Email password or App Password                           |
+| `email.imap_server`    | Yes      | —         | IMAP server hostname                                     |
+| `email.folder`         | No       | `INBOX`   | IMAP folder to watch for unread mail                     |
+| `prometheus.port`      | No       | `8000`    | Port to expose the Prometheus metrics endpoint on        |
+| `prometheus.interval`  | No       | `60`      | Seconds between metric update cycles (minimum: 30)       |
 
-💡 **Tip:** If using Gmail, generate an **App Password** instead of using your real password.
+**Tip:** If using Gmail, generate an **App Password** instead of using your account password.
 
 ---
 
-## **Troubleshooting 🛠️**
+## Troubleshooting
 
-### **Container Not Running?**
-Check logs:
+### Container not running?
 ```sh
-docker-compose logs -f
+docker compose logs -f
 ```
 
-### **Metrics Not Updating?**
-- Ensure **emails are being received** at your inbox.
-- Check that **emails contain DMARC reports** in `.zip` or `.gz` format.
-- Run the script manually to debug:
-  ```sh
-  docker-compose up
-  ```
+### Metrics not updating?
+- Ensure emails with DMARC reports (`.zip` or `.gz` attachments) are arriving in the configured folder.
+- Check that the IMAP credentials and server are correct.
 
-### **Invalid Credentials?**
-- Make sure the **email/password** are correct.
-- **Use an App Password** instead of your real password (for Gmail, Outlook, etc.).
+### Invalid credentials?
+- Use an **App Password** instead of your real password (required for Gmail, Outlook, etc.).
 
 ---
 
-## **Contributing 🤝**
+## Contributing
 
 Feel free to open an **issue** or submit a **pull request** if you have improvements!
 
 ---
 
-## **License 📜**
+## License
 
 This project is open-source and licensed under the **MIT License**.
